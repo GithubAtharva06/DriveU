@@ -1,6 +1,5 @@
 package com.driveu.driverapp.dto.Response;
 
-import com.driveu.driverapp.entities.StatusCheck;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -9,7 +8,7 @@ import java.util.UUID;
 
 @Getter
 @Setter
-public class PassengerRegistrationResponse {
+public class PassengerResponse {
 
     private UUID id;
     private String phoneNo;

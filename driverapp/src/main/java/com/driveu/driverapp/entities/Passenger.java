@@ -37,4 +37,6 @@ public class Passenger {
     )
     private String password;
     private LocalDateTime createdAt;
+
+    private boolean active;
 }
