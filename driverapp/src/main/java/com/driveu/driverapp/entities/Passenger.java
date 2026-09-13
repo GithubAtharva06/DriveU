@@ -15,7 +15,7 @@ import java.util.UUID;
 @Entity
 @Getter
 @Setter
-public class User {
+public class Passenger {
     @Id
     private UUID id;
     @NotBlank(message = "Phone number is required")
