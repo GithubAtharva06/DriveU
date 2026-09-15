@@ -80,6 +80,15 @@ public class PassengerService {
         passengerRepository.save(passenger);
     }
 
+    public void reactivatePassenger(UUID id) {
+        Passenger passenger = passengerRepository.findById(id)
+                .orElseThrow();
+
+        passenger.setActive(true);
+
+        passengerRepository.save(passenger);
+    }
+
     public void deletePassenger(UUID id) {
         Passenger passenger = passengerRepository.findById(id)
                 .orElseThrow();

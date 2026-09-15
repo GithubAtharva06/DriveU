@@ -1,6 +1,5 @@
 package com.driveu.driverapp.service;
 
-import com.driveu.driverapp.dto.Request.RideRequest;
 import com.driveu.driverapp.dto.Response.RideResponse;
 import com.driveu.driverapp.entities.Ride;
 import com.driveu.driverapp.repository.DriverRepository;
