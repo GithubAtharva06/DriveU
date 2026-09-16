@@ -89,6 +89,14 @@ public class DriverService {
 
         driverRepository.save(driver);
     }
+    public void reactivateDriver(UUID id) {
+        Driver driver = driverRepository.findById(id)
+                .orElseThrow();
+
+        driver.setStatus(StatusCheck.OFFLINE);
+
+        driverRepository.save(driver);
+    }
 
     public void deleteDriver(UUID id) {
         Driver driver = driverRepository.findById(id)

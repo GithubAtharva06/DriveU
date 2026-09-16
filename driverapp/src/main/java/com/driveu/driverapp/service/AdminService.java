@@ -12,6 +12,7 @@ import com.driveu.driverapp.repository.AdminRepository;
 import com.driveu.driverapp.repository.DriverRepository;
 import com.driveu.driverapp.repository.PassengerRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -187,5 +188,26 @@ public class AdminService {
                 .orElseThrow();
 
         driverRepository.delete(driver);
+    }
+
+    @Transactional
+    public void deleteMultiplePassengers(List<UUID> ids) {
+        List<Passenger> passengers = passengerRepository.findAllById(ids);
+
+        if (passengers.size() != ids.size()) {
+            throw new RuntimeException("One or more passengers not found");
+        }
+
+        passengerRepository.deleteAll(passengers);
+    }
+    @Transactional
+    public void deleteMultipleDrivers(List<UUID> ids) {
+        List<Driver> drivers = driverRepository.findAllById(ids);
+
+        if (drivers.size() != ids.size()) {
+            throw new RuntimeException("One or more drivers not found");
+        }
+
+        driverRepository.deleteAll(drivers);
     }
 }
