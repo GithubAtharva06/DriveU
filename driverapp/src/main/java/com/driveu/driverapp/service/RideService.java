@@ -38,8 +38,15 @@ public class RideService {
         }
 
         response.setRideStatus(ride.getRideStatus());
+
         response.setPickupLocation(ride.getPickupLocation());
+        response.setPickupLatitude(ride.getPickupLatitude());
+        response.setPickupLongitude(ride.getPickupLongitude());
+
         response.setDropLocation(ride.getDropLocation());
+        response.setDropLatitude(ride.getDropLatitude());
+        response.setDropLongitude(ride.getDropLongitude());
+
         response.setFare(ride.getFare());
         response.setPickupAt(ride.getPickupAt());
         response.setDropOffAt(ride.getDropOffAt());

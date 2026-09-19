@@ -13,12 +13,24 @@ import java.util.UUID;
 public class RideResponse {
 
     private UUID rideId;
+
     private UUID passengerId;
+
     private UUID driverId;
+
     private RideStatus rideStatus;
+
     private String pickupLocation;
+    private Double pickupLatitude;
+    private Double pickupLongitude;
+
     private String dropLocation;
+    private Double dropLatitude;
+    private Double dropLongitude;
+
     private BigDecimal fare;
+
     private LocalDateTime pickupAt;
+
     private LocalDateTime dropOffAt;
 }

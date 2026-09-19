@@ -10,6 +10,12 @@ import java.util.UUID;
 public class RideRequest {
 
     private UUID passengerId;
+
     private String pickupLocation;
+    private Double pickupLatitude;
+    private Double pickupLongitude;
+
     private String dropLocation;
+    private Double dropLatitude;
+    private Double dropLongitude;
 }

@@ -31,6 +31,16 @@ public class Ride {
     private String pickupLocation;
     private String dropLocation;
 
+    @Column(nullable = false)
+    private Double pickupLatitude;
+
+    @Column(nullable = false)
+    private Double pickupLongitude;
+
+    private Double dropLatitude;
+
+    private Double dropLongitude;
+
     private BigDecimal fare;
 
     private LocalDateTime pickupAt;
