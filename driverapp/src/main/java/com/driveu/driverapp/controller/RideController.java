@@ -1,6 +1,6 @@
 
 package com.driveu.driverapp.controller;
-
+import com.driveu.driverapp.dto.Request.RideStatusUpdateRequest;
 import com.driveu.driverapp.dto.Response.RideResponse;
 import com.driveu.driverapp.service.RideService;
 import org.springframework.http.ResponseEntity;
@@ -85,4 +85,19 @@ public class RideController {
         return ResponseEntity.ok(response);
     }
 
+    @PatchMapping("/{rideId}/status")
+    public ResponseEntity<RideResponse> updateRideStatus(
+            @PathVariable UUID rideId,
+            @RequestParam UUID driverId,
+            @Valid @RequestBody RideStatusUpdateRequest request
+    ) {
+
+        RideResponse response = rideService.updateRideStatus(
+                rideId,
+                driverId,
+                request.getRideStatus()
+        );
+
+        return ResponseEntity.ok(response);
+    }
 }

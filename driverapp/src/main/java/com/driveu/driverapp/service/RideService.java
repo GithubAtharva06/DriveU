@@ -184,4 +184,69 @@ public class RideService {
 
         return mapToResponse(savedRide);
     }
+
+    @Transactional
+    public RideResponse updateRideStatus(
+            UUID rideId,
+            UUID driverId,
+            RideStatus newStatus
+    ) {
+
+        Ride ride = rideRepository.findById(rideId)
+                .orElseThrow(() -> new RuntimeException("Ride not found"));
+
+        // Ensure the ride has an assigned driver
+        if (ride.getDriver() == null) {
+            throw new RuntimeException("No driver assigned to this ride");
+        }
+
+        // Ensure the requested driver owns this ride
+        if (!ride.getDriver().getId().equals(driverId)) {
+            throw new RuntimeException(
+                    "You are not assigned to this ride"
+            );
+        }
+
+        RideStatus currentStatus = ride.getRideStatus();
+
+        // Validate the status transition
+        boolean validTransition = switch (currentStatus) {
+
+            case ACCEPTED ->
+                    newStatus == RideStatus.ARRIVING;
+
+            case ARRIVING ->
+                    newStatus == RideStatus.ARRIVED;
+
+            case ARRIVED ->
+                    newStatus == RideStatus.IN_PROGRESS;
+
+            case IN_PROGRESS ->
+                    newStatus == RideStatus.COMPLETED;
+
+            default -> false;
+        };
+
+        if (!validTransition) {
+            throw new RuntimeException(
+                    "Invalid ride status transition from "
+                            + currentStatus + " to " + newStatus
+            );
+        }
+
+        // Update timestamps
+        if (newStatus == RideStatus.IN_PROGRESS) {
+            ride.setPickupAt(java.time.LocalDateTime.now());
+        }
+
+        if (newStatus == RideStatus.COMPLETED) {
+            ride.setDropOffAt(java.time.LocalDateTime.now());
+        }
+
+        ride.setRideStatus(newStatus);
+
+        Ride savedRide = rideRepository.save(ride);
+
+        return mapToResponse(savedRide);
+    }
 }
