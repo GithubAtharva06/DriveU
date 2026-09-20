@@ -5,6 +5,9 @@ import com.driveu.driverapp.dto.Response.RideResponse;
 import com.driveu.driverapp.service.RideService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.driveu.driverapp.dto.Request.RideRequest;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 
 import java.util.List;
 import java.util.UUID;
@@ -17,6 +20,19 @@ public class RideController {
 
     public RideController(RideService rideService) {
         this.rideService = rideService;
+    }
+
+    // Create a new ride
+    @PostMapping
+    public ResponseEntity<RideResponse> createRide(
+            @Valid @RequestBody RideRequest request
+    ) {
+
+        RideResponse response = rideService.createRide(request);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(response);
     }
 
     // Get ride by ID
@@ -58,4 +74,15 @@ public class RideController {
 
         return ResponseEntity.ok(responses);
     }
+
+    @PatchMapping("/{rideId}/accept")
+    public ResponseEntity<RideResponse> acceptRide(
+            @PathVariable UUID rideId,
+            @RequestParam UUID driverId
+    ) {
+        RideResponse response = rideService.acceptRide(rideId, driverId);
+
+        return ResponseEntity.ok(response);
+    }
+
 }
