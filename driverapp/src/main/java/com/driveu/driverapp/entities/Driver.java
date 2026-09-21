@@ -1,9 +1,6 @@
 package com.driveu.driverapp.entities;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -46,6 +43,7 @@ public class Driver {
     @NotBlank
     private String licenseNumber;
     @Enumerated(EnumType.STRING)
-    private StatusCheck status;
+    @Column(nullable = false)
+    private StatusCheck status = StatusCheck.OFFLINE;
     private LocalDateTime createdAt;
 }

@@ -1,3 +1,4 @@
+
 package com.driveu.driverapp.service;
 
 import com.driveu.driverapp.dto.Request.DriverRequest;
@@ -18,6 +19,12 @@ public class DriverService {
 
     public DriverService(DriverRepository driverRepository) {
         this.driverRepository = driverRepository;
+    }
+
+    private Driver findDriver(UUID id) {
+        return driverRepository.findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException("Driver not found with ID: " + id));
     }
 
     private DriverResponse mapToResponse(Driver driver) {
@@ -46,29 +53,29 @@ public class DriverService {
         driver.setId(UUID.randomUUID());
         driver.setCreatedAt(LocalDateTime.now());
 
+        // Driver entity defaults to OFFLINE.
+        driver.setStatus(StatusCheck.OFFLINE);
+
         driverRepository.save(driver);
 
         return mapToResponse(driver);
     }
 
     public DriverResponse getDriverById(UUID id) {
-        Driver driver = driverRepository.findById(id)
-                .orElseThrow();
+        Driver driver = findDriver(id);
 
         return mapToResponse(driver);
     }
 
     public List<DriverResponse> getAllDrivers() {
-        List<Driver> drivers = driverRepository.findAll();
-
-        return drivers.stream()
+        return driverRepository.findAll()
+                .stream()
                 .map(this::mapToResponse)
                 .toList();
     }
 
     public DriverResponse updateDriver(UUID id, DriverRequest request) {
-        Driver driver = driverRepository.findById(id)
-                .orElseThrow();
+        Driver driver = findDriver(id);
 
         driver.setPhoneNo(request.getPhoneNo());
         driver.setUserName(request.getUserName());
@@ -82,16 +89,7 @@ public class DriverService {
     }
 
     public void deactivateDriver(UUID id) {
-        Driver driver = driverRepository.findById(id)
-                .orElseThrow();
-
-        driver.setStatus(StatusCheck.OFFLINE);
-
-        driverRepository.save(driver);
-    }
-    public void reactivateDriver(UUID id) {
-        Driver driver = driverRepository.findById(id)
-                .orElseThrow();
+        Driver driver = findDriver(id);
 
         driver.setStatus(StatusCheck.OFFLINE);
 
@@ -99,14 +97,13 @@ public class DriverService {
     }
 
     public void deleteDriver(UUID id) {
-        Driver driver = driverRepository.findById(id)
-                .orElseThrow();
+        Driver driver = findDriver(id);
 
         driverRepository.delete(driver);
     }
+
     public void setDriverOnline(UUID id) {
-        Driver driver = driverRepository.findById(id)
-                .orElseThrow();
+        Driver driver = findDriver(id);
 
         driver.setStatus(StatusCheck.ONLINE);
 
@@ -114,8 +111,7 @@ public class DriverService {
     }
 
     public void setDriverOffline(UUID id) {
-        Driver driver = driverRepository.findById(id)
-                .orElseThrow();
+        Driver driver = findDriver(id);
 
         driver.setStatus(StatusCheck.OFFLINE);
 
@@ -123,8 +119,7 @@ public class DriverService {
     }
 
     public boolean isDriverAvailable(UUID id) {
-        Driver driver = driverRepository.findById(id)
-                .orElseThrow();
+        Driver driver = findDriver(id);
 
         return driver.getStatus() == StatusCheck.ONLINE;
     }

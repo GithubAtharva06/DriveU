@@ -1,17 +1,19 @@
+
 package com.driveu.driverapp.service;
 
+import com.driveu.driverapp.dto.Request.RideRequest;
 import com.driveu.driverapp.dto.Response.RideResponse;
+import com.driveu.driverapp.entities.Driver;
+import com.driveu.driverapp.entities.Passenger;
 import com.driveu.driverapp.entities.Ride;
+import com.driveu.driverapp.entities.RideStatus;
 import com.driveu.driverapp.repository.DriverRepository;
 import com.driveu.driverapp.repository.PassengerRepository;
 import com.driveu.driverapp.repository.RideRepository;
-import org.springframework.stereotype.Service;
-import com.driveu.driverapp.dto.Request.RideRequest;
-import com.driveu.driverapp.entities.Passenger;
-import com.driveu.driverapp.entities.RideStatus;
-import com.driveu.driverapp.entities.Driver;
-
 import jakarta.transaction.Transactional;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -34,6 +36,7 @@ public class RideService {
     }
 
     private RideResponse mapToResponse(Ride ride) {
+
         RideResponse response = new RideResponse();
 
         response.setRideId(ride.getRideId());
@@ -60,9 +63,31 @@ public class RideService {
         return response;
     }
 
+    private List<RideStatus> getPassengerActiveStatuses() {
+
+        return Arrays.asList(
+                RideStatus.REQUESTED,
+                RideStatus.ACCEPTED,
+                RideStatus.ARRIVING,
+                RideStatus.ARRIVED,
+                RideStatus.IN_PROGRESS
+        );
+    }
+
+    private List<RideStatus> getDriverActiveStatuses() {
+
+        return Arrays.asList(
+                RideStatus.ACCEPTED,
+                RideStatus.ARRIVING,
+                RideStatus.ARRIVED,
+                RideStatus.IN_PROGRESS
+        );
+    }
+
     public RideResponse getRideById(UUID rideId) {
+
         Ride ride = rideRepository.findById(rideId)
-                .orElseThrow();
+                .orElseThrow(() -> new RuntimeException("Ride not found"));
 
         return mapToResponse(ride);
     }
@@ -70,7 +95,7 @@ public class RideService {
     public List<RideResponse> getRidesByPassenger(UUID passengerId) {
 
         passengerRepository.findById(passengerId)
-                .orElseThrow();
+                .orElseThrow(() -> new RuntimeException("Passenger not found"));
 
         return rideRepository.findByPassengerId(passengerId)
                 .stream()
@@ -81,7 +106,7 @@ public class RideService {
     public List<RideResponse> getRidesByDriver(UUID driverId) {
 
         driverRepository.findById(driverId)
-                .orElseThrow();
+                .orElseThrow(() -> new RuntimeException("Driver not found"));
 
         return rideRepository.findByDriverId(driverId)
                 .stream()
@@ -97,23 +122,20 @@ public class RideService {
                 .toList();
     }
 
+    @Transactional
     public RideResponse createRide(RideRequest request) {
 
         Passenger passenger = passengerRepository.findById(request.getPassengerId())
                 .orElseThrow(() -> new RuntimeException("Passenger not found"));
 
-        List<RideStatus> activeStatuses = Arrays.asList(
-                RideStatus.REQUESTED,
-                RideStatus.ACCEPTED,
-                RideStatus.ARRIVING,
-                RideStatus.ARRIVED,
-                RideStatus.IN_PROGRESS
-        );
+        if (!passenger.isActive()) {
+            throw new RuntimeException("Passenger account is inactive");
+        }
 
         boolean hasActiveRide =
                 rideRepository.existsByPassengerIdAndRideStatusIn(
                         passenger.getId(),
-                        activeStatuses
+                        getPassengerActiveStatuses()
                 );
 
         if (hasActiveRide) {
@@ -151,23 +173,22 @@ public class RideService {
         Driver driver = driverRepository.findById(driverId)
                 .orElseThrow(() -> new RuntimeException("Driver not found"));
 
-        // Ride must still be requested
         if (ride.getRideStatus() != RideStatus.REQUESTED) {
             throw new RuntimeException("Ride is no longer available");
         }
 
-        // Driver cannot accept another active ride
-        List<RideStatus> activeStatuses = Arrays.asList(
-                RideStatus.ACCEPTED,
-                RideStatus.ARRIVING,
-                RideStatus.ARRIVED,
-                RideStatus.IN_PROGRESS
-        );
+        if (driver.getStatus() == null ||
+                !driver.getStatus().name().equals("ONLINE")) {
+
+            throw new RuntimeException(
+                    "Driver must be online to accept a ride"
+            );
+        }
 
         boolean driverHasActiveRide =
                 rideRepository.existsByDriverIdAndRideStatusIn(
                         driverId,
-                        activeStatuses
+                        getDriverActiveStatuses()
                 );
 
         if (driverHasActiveRide) {
@@ -176,7 +197,6 @@ public class RideService {
             );
         }
 
-        // Assign driver and update status
         ride.setDriver(driver);
         ride.setRideStatus(RideStatus.ACCEPTED);
 
@@ -192,15 +212,17 @@ public class RideService {
             RideStatus newStatus
     ) {
 
+        if (newStatus == null) {
+            throw new RuntimeException("Ride status cannot be null");
+        }
+
         Ride ride = rideRepository.findById(rideId)
                 .orElseThrow(() -> new RuntimeException("Ride not found"));
 
-        // Ensure the ride has an assigned driver
         if (ride.getDriver() == null) {
             throw new RuntimeException("No driver assigned to this ride");
         }
 
-        // Ensure the requested driver owns this ride
         if (!ride.getDriver().getId().equals(driverId)) {
             throw new RuntimeException(
                     "You are not assigned to this ride"
@@ -209,7 +231,6 @@ public class RideService {
 
         RideStatus currentStatus = ride.getRideStatus();
 
-        // Validate the status transition
         boolean validTransition = switch (currentStatus) {
 
             case ACCEPTED ->
@@ -234,16 +255,67 @@ public class RideService {
             );
         }
 
-        // Update timestamps
         if (newStatus == RideStatus.IN_PROGRESS) {
-            ride.setPickupAt(java.time.LocalDateTime.now());
+
+            if (ride.getPickupAt() != null) {
+                throw new RuntimeException(
+                        "Pickup time has already been recorded"
+                );
+            }
+
+            ride.setPickupAt(LocalDateTime.now());
         }
 
         if (newStatus == RideStatus.COMPLETED) {
-            ride.setDropOffAt(java.time.LocalDateTime.now());
+
+            if (ride.getPickupAt() == null) {
+                throw new RuntimeException(
+                        "Pickup time must be recorded before completion"
+                );
+            }
+
+            ride.setDropOffAt(LocalDateTime.now());
         }
 
         ride.setRideStatus(newStatus);
+
+        Ride savedRide = rideRepository.save(ride);
+
+        return mapToResponse(savedRide);
+    }
+
+    @Transactional
+    public RideResponse cancelRide(UUID rideId, UUID passengerId) {
+
+        Ride ride = rideRepository.findById(rideId)
+                .orElseThrow(() -> new RuntimeException("Ride not found"));
+
+        if (!ride.getPassenger().getId().equals(passengerId)) {
+            throw new RuntimeException(
+                    "You are not the passenger of this ride"
+            );
+        }
+
+        RideStatus currentStatus = ride.getRideStatus();
+
+        boolean cancellable = switch (currentStatus) {
+
+            case REQUESTED,
+                 ACCEPTED,
+                 ARRIVING,
+                 ARRIVED -> true;
+
+            default -> false;
+        };
+
+        if (!cancellable) {
+            throw new RuntimeException(
+                    "Ride cannot be cancelled in status "
+                            + currentStatus
+            );
+        }
+
+        ride.setRideStatus(RideStatus.CANCELLED);
 
         Ride savedRide = rideRepository.save(ride);
 

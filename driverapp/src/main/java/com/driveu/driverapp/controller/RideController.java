@@ -85,6 +85,19 @@ public class RideController {
         return ResponseEntity.ok(response);
     }
 
+    @PatchMapping("/{rideId}/cancel")
+    public ResponseEntity<RideResponse> cancelRide(
+            @PathVariable UUID rideId,
+            @RequestParam UUID passengerId
+    ) {
+        RideResponse response = rideService.cancelRide(
+                rideId,
+                passengerId
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
     @PatchMapping("/{rideId}/status")
     public ResponseEntity<RideResponse> updateRideStatus(
             @PathVariable UUID rideId,

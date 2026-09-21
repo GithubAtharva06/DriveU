@@ -11,9 +11,12 @@ import java.util.UUID;
 public class DriverLocationResponse {
 
     private UUID locationId;
+
     private UUID driverId;
+
     private Double latitude;
+
     private Double longitude;
-    private Boolean available;
+
     private LocalDateTime updatedAt;
 }

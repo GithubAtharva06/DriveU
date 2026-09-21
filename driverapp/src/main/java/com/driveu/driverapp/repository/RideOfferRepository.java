@@ -14,6 +14,11 @@ public interface RideOfferRepository
 
     List<RideOffer> findByDriver_Id(UUID driverId);
 
+    List<RideOffer> findByDriver_IdAndOfferStatus(
+            UUID driverId,
+            OfferStatus offerStatus
+    );
+
     boolean existsByRide_RideIdAndDriver_Id(
             UUID rideId,
             UUID driverId

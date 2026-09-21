@@ -1,12 +1,9 @@
+
 package com.driveu.driverapp.service;
 
 import com.driveu.driverapp.dto.Response.NearbyDriverResponse;
 import com.driveu.driverapp.dto.Response.RideOfferResponse;
-import com.driveu.driverapp.entities.Driver;
-import com.driveu.driverapp.entities.OfferStatus;
-import com.driveu.driverapp.entities.Ride;
-import com.driveu.driverapp.entities.RideOffer;
-import com.driveu.driverapp.entities.RideStatus;
+import com.driveu.driverapp.entities.*;
 import com.driveu.driverapp.repository.DriverRepository;
 import com.driveu.driverapp.repository.RideOfferRepository;
 import com.driveu.driverapp.repository.RideRepository;
@@ -141,11 +138,7 @@ public class RideOfferService {
 
         RideOffer offer = getOffer(offerId);
 
-        if (!offer.getDriver().getId().equals(driverId)) {
-            throw new RuntimeException(
-                    "This offer does not belong to the driver"
-            );
-        }
+        validateOfferOwnership(offer, driverId);
 
         if (offer.getOfferStatus() != OfferStatus.PENDING) {
             throw new RuntimeException(
@@ -153,12 +146,9 @@ public class RideOfferService {
             );
         }
 
-        if (offer.getExpiresAt().isBefore(LocalDateTime.now())) {
+        expireOfferIfNecessary(offer);
 
-            offer.setOfferStatus(OfferStatus.EXPIRED);
-
-            rideOfferRepository.save(offer);
-
+        if (offer.getOfferStatus() == OfferStatus.EXPIRED) {
             throw new RuntimeException(
                     "This offer has expired"
             );
@@ -166,7 +156,8 @@ public class RideOfferService {
 
         offer.setOfferStatus(OfferStatus.DECLINED);
 
-        RideOffer savedOffer = rideOfferRepository.save(offer);
+        RideOffer savedOffer =
+                rideOfferRepository.save(offer);
 
         return mapToResponse(savedOffer);
     }
@@ -181,11 +172,7 @@ public class RideOfferService {
 
         RideOffer offer = getOffer(offerId);
 
-        if (!offer.getDriver().getId().equals(driverId)) {
-            throw new RuntimeException(
-                    "This offer does not belong to the driver"
-            );
-        }
+        validateOfferOwnership(offer, driverId);
 
         if (offer.getOfferStatus() != OfferStatus.PENDING) {
             throw new RuntimeException(
@@ -193,12 +180,11 @@ public class RideOfferService {
             );
         }
 
-        if (offer.getExpiresAt().isBefore(LocalDateTime.now())) {
+        // Check whether the offer has expired by time
 
-            offer.setOfferStatus(OfferStatus.EXPIRED);
+        expireOfferIfNecessary(offer);
 
-            rideOfferRepository.save(offer);
-
+        if (offer.getOfferStatus() == OfferStatus.EXPIRED) {
             throw new RuntimeException(
                     "This offer has expired"
             );
@@ -211,6 +197,36 @@ public class RideOfferService {
         if (ride.getRideStatus() != RideStatus.REQUESTED) {
             throw new RuntimeException(
                     "This ride is no longer available"
+            );
+        }
+
+        Driver driver = offer.getDriver();
+
+        // Driver must be online
+
+        if (driver.getStatus() != StatusCheck.ONLINE) {
+            throw new RuntimeException(
+                    "Driver must be online to accept an offer"
+            );
+        }
+
+        // Check driver's current distance from pickup location
+
+        boolean withinRange =
+                driverLocationService.isDriverWithinRange(
+                        driverId,
+                        ride.getPickupLatitude(),
+                        ride.getPickupLongitude()
+                );
+
+        if (!withinRange) {
+
+            offer.setOfferStatus(OfferStatus.EXPIRED);
+
+            rideOfferRepository.save(offer);
+
+            throw new RuntimeException(
+                    "You are outside the 2 km pickup range"
             );
         }
 
@@ -237,7 +253,7 @@ public class RideOfferService {
 
         // Assign driver to ride
 
-        ride.setDriver(offer.getDriver());
+        ride.setDriver(driver);
         ride.setRideStatus(RideStatus.ACCEPTED);
 
         rideRepository.save(ride);
@@ -258,6 +274,7 @@ public class RideOfferService {
         for (RideOffer otherOffer : pendingOffers) {
 
             if (!otherOffer.getOfferId().equals(offerId)) {
+
                 otherOffer.setOfferStatus(
                         OfferStatus.RIDE_BOOKED
                 );
@@ -266,7 +283,8 @@ public class RideOfferService {
 
         rideOfferRepository.saveAll(pendingOffers);
 
-        RideOffer savedOffer = rideOfferRepository.save(offer);
+        RideOffer savedOffer =
+                rideOfferRepository.save(offer);
 
         return mapToResponse(savedOffer);
     }
@@ -277,13 +295,45 @@ public class RideOfferService {
 
         return rideOfferRepository.findById(offerId)
                 .orElseThrow(() ->
-                        new RuntimeException("Ride offer not found")
+                        new RuntimeException(
+                                "Ride offer not found"
+                        )
                 );
     }
 
-    private RideOfferResponse mapToResponse(RideOffer offer) {
+    private void validateOfferOwnership(
+            RideOffer offer,
+            UUID driverId
+    ) {
 
-        RideOfferResponse response = new RideOfferResponse();
+        if (!offer.getDriver().getId().equals(driverId)) {
+
+            throw new RuntimeException(
+                    "This offer does not belong to the driver"
+            );
+        }
+    }
+
+    private void expireOfferIfNecessary(
+            RideOffer offer
+    ) {
+
+        LocalDateTime now = LocalDateTime.now();
+
+        if (!offer.getExpiresAt().isAfter(now)) {
+
+            offer.setOfferStatus(OfferStatus.EXPIRED);
+
+            rideOfferRepository.save(offer);
+        }
+    }
+
+    private RideOfferResponse mapToResponse(
+            RideOffer offer
+    ) {
+
+        RideOfferResponse response =
+                new RideOfferResponse();
 
         response.setOfferId(offer.getOfferId());
         response.setRideId(offer.getRide().getRideId());
@@ -294,4 +344,5 @@ public class RideOfferService {
 
         return response;
     }
+
 }

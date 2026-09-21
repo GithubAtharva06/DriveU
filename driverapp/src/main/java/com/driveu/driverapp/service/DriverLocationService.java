@@ -2,32 +2,43 @@ package com.driveu.driverapp.service;
 
 import com.driveu.driverapp.dto.Request.LocationUpdateRequest;
 import com.driveu.driverapp.dto.Response.DriverLocationResponse;
+import com.driveu.driverapp.dto.Response.NearbyDriverResponse;
 import com.driveu.driverapp.entities.Driver;
 import com.driveu.driverapp.entities.DriverLocation;
+import com.driveu.driverapp.entities.StatusCheck;
 import com.driveu.driverapp.repository.DriverLocationRepository;
 import com.driveu.driverapp.repository.DriverRepository;
 import org.springframework.stereotype.Service;
 
-import com.driveu.driverapp.dto.Response.NearbyDriverResponse;
-import java.util.Comparator;
-import java.util.List;
+import com.driveu.driverapp.entities.OfferStatus;
+import com.driveu.driverapp.entities.RideOffer;
+import com.driveu.driverapp.repository.RideOfferRepository;
+import jakarta.transaction.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 
 @Service
 public class DriverLocationService {
+    private static final double MAX_OFFER_DISTANCE_KM = 2.0;
+
+    private final RideOfferRepository rideOfferRepository;
 
     private final DriverLocationRepository driverLocationRepository;
     private final DriverRepository driverRepository;
 
     public DriverLocationService(
             DriverLocationRepository driverLocationRepository,
-            DriverRepository driverRepository
+            DriverRepository driverRepository,
+            RideOfferRepository rideOfferRepository
     ) {
         this.driverLocationRepository = driverLocationRepository;
         this.driverRepository = driverRepository;
+        this.rideOfferRepository = rideOfferRepository;
     }
+
     private double calculateDistance(
             double latitude1,
             double longitude1,
@@ -60,47 +71,119 @@ public class DriverLocationService {
         return earthRadiusInKm * c;
     }
 
+    private boolean isOutsideOfferRange(
+            double driverLatitude,
+            double driverLongitude,
+            double pickupLatitude,
+            double pickupLongitude
+    ) {
+        double distance = calculateDistance(
+                driverLatitude,
+                driverLongitude,
+                pickupLatitude,
+                pickupLongitude
+        );
+
+        return distance > MAX_OFFER_DISTANCE_KM;
+    }
+    @Transactional
+    public void expireOffersOutsideRange(
+            UUID driverId,
+            double driverLatitude,
+            double driverLongitude
+    ) {
+
+        List<RideOffer> pendingOffers =
+                rideOfferRepository.findByDriver_IdAndOfferStatus(
+                        driverId,
+                        OfferStatus.PENDING
+                );
+
+        LocalDateTime now = LocalDateTime.now();
+
+        for (RideOffer offer : pendingOffers) {
+
+            // Expire offers that have passed their expiry time
+            if (!offer.getExpiresAt().isAfter(now)) {
+
+                offer.setOfferStatus(OfferStatus.EXPIRED);
+                continue;
+            }
+
+            double pickupLatitude =
+                    offer.getRide().getPickupLatitude();
+
+            double pickupLongitude =
+                    offer.getRide().getPickupLongitude();
+
+            boolean outsideRange = isOutsideOfferRange(
+                    driverLatitude,
+                    driverLongitude,
+                    pickupLatitude,
+                    pickupLongitude
+            );
+
+            if (outsideRange) {
+
+                offer.setOfferStatus(OfferStatus.EXPIRED);
+            }
+        }
+
+        rideOfferRepository.saveAll(pendingOffers);
+    }
+
     private DriverLocationResponse mapToResponse(
             DriverLocation driverLocation
     ) {
-        DriverLocationResponse response = new DriverLocationResponse();
+
+        DriverLocationResponse response =
+                new DriverLocationResponse();
 
         response.setLocationId(driverLocation.getLocationId());
         response.setDriverId(driverLocation.getDriver().getId());
         response.setLatitude(driverLocation.getLatitude());
         response.setLongitude(driverLocation.getLongitude());
-        response.setAvailable(driverLocation.getAvailable());
         response.setUpdatedAt(driverLocation.getUpdatedAt());
 
         return response;
     }
 
+    @Transactional
     public DriverLocationResponse updateDriverLocation(
             UUID driverId,
             LocationUpdateRequest request
     ) {
 
         Driver driver = driverRepository.findById(driverId)
-                .orElseThrow();
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Driver not found with ID: " + driverId
+                        )
+                );
 
-        DriverLocation driverLocation = driverLocationRepository
-                .findByDriverId(driverId)
-                .orElseGet(DriverLocation::new);
+        DriverLocation driverLocation =
+                driverLocationRepository
+                        .findByDriverId(driverId)
+                        .orElseGet(DriverLocation::new);
 
         driverLocation.setDriver(driver);
         driverLocation.setLatitude(request.getLatitude());
         driverLocation.setLongitude(request.getLongitude());
         driverLocation.setUpdatedAt(LocalDateTime.now());
 
-        if (driverLocation.getAvailable() == null) {
-            driverLocation.setAvailable(false);
-        }
-
         DriverLocation savedLocation =
                 driverLocationRepository.save(driverLocation);
 
+        // Expire pending offers if the driver is outside the pickup range
+        expireOffersOutsideRange(
+                driverId,
+                request.getLatitude(),
+                request.getLongitude()
+        );
+
         return mapToResponse(savedLocation);
     }
+
     public List<NearbyDriverResponse> findNearbyDrivers(
             Double pickupLatitude,
             Double pickupLongitude
@@ -110,55 +193,79 @@ public class DriverLocationService {
 
         return driverLocationRepository.findAll()
                 .stream()
-                .filter(location -> Boolean.TRUE.equals(location.getAvailable()))
+
+                // Only drivers who are currently ONLINE
+                .filter(location ->
+                        location.getDriver().getStatus() == StatusCheck.ONLINE
+                )
+
                 .map(location -> {
 
-                    double distance = calculateDistance(pickupLatitude, pickupLongitude,
+                    double distance = calculateDistance(
+                            pickupLatitude,
+                            pickupLongitude,
                             location.getLatitude(),
-                            location.getLongitude());
+                            location.getLongitude()
+                    );
 
-                    NearbyDriverResponse response = new NearbyDriverResponse();
-                    response.setDriverId(location.getDriver().getId());
-                    response.setLatitude(location.getLatitude());
-                    response.setLongitude(location.getLongitude());
+                    NearbyDriverResponse response =
+                            new NearbyDriverResponse();
+
+                    response.setDriverId(
+                            location.getDriver().getId()
+                    );
+
+                    response.setLatitude(
+                            location.getLatitude()
+                    );
+
+                    response.setLongitude(
+                            location.getLongitude()
+                    );
+
                     response.setDistanceInKm(distance);
+
                     return response;
                 })
+
+                // Only drivers within 2 km
                 .filter(response ->
                         response.getDistanceInKm() <= radiusInKm
                 )
+
+                // Nearest driver first
                 .sorted(
                         Comparator.comparing(
                                 NearbyDriverResponse::getDistanceInKm
                         )
                 )
+
                 .toList();
     }
 
-    public DriverLocationResponse updateDriverAvailability(
+    public boolean isDriverWithinRange(
             UUID driverId,
-            Boolean available
+            double pickupLatitude,
+            double pickupLongitude
     ) {
 
-        Driver driver = driverRepository.findById(driverId)
-                .orElseThrow(() ->
-                        new RuntimeException("Driver not found")
-                );
+        DriverLocation driverLocation =
+                driverLocationRepository.findByDriverId(driverId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Driver location not found"
+                                )
+                        );
 
-        DriverLocation driverLocation = driverLocationRepository
-                .findByDriverId(driverId)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "Driver must update location before going online"
-                        )
-                );
+        double distance = calculateDistance(
+                driverLocation.getLatitude(),
+                driverLocation.getLongitude(),
+                pickupLatitude,
+                pickupLongitude
+        );
 
-        driverLocation.setDriver(driver);
-        driverLocation.setAvailable(available);
-
-        DriverLocation savedLocation =
-                driverLocationRepository.save(driverLocation);
-
-        return mapToResponse(savedLocation);
+        return distance <= MAX_OFFER_DISTANCE_KM;
     }
+
+
 }

@@ -4,6 +4,7 @@ package com.driveu.driverapp.controller;
 import com.driveu.driverapp.dto.Request.DriverRequest;
 import com.driveu.driverapp.dto.Response.DriverResponse;
 import com.driveu.driverapp.service.DriverService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,7 +25,7 @@ public class DriverController {
     // Register a new driver
     @PostMapping
     public ResponseEntity<DriverResponse> registerDriver(
-            @RequestBody DriverRequest request) {
+            @Valid @RequestBody DriverRequest request) {
 
         DriverResponse response = driverService.registerDriver(request);
 
@@ -56,7 +57,7 @@ public class DriverController {
     @PutMapping("/{id}")
     public ResponseEntity<DriverResponse> updateDriver(
             @PathVariable UUID id,
-            @RequestBody DriverRequest request) {
+            @Valid @RequestBody DriverRequest request) {
 
         DriverResponse response =
                 driverService.updateDriver(id, request);
@@ -70,16 +71,6 @@ public class DriverController {
             @PathVariable UUID id) {
 
         driverService.deactivateDriver(id);
-
-        return ResponseEntity.noContent().build();
-    }
-
-    // Reactivate driver account
-    @PatchMapping("/{id}/reactivate")
-    public ResponseEntity<Void> reactivateDriver(
-            @PathVariable UUID id) {
-
-        driverService.reactivateDriver(id);
 
         return ResponseEntity.noContent().build();
     }
@@ -104,7 +95,7 @@ public class DriverController {
         return ResponseEntity.noContent().build();
     }
 
-    // Check driver availability
+    // Check driver availability based on status
     @GetMapping("/{id}/availability")
     public ResponseEntity<Boolean> isDriverAvailable(
             @PathVariable UUID id) {
