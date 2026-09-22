@@ -42,6 +42,19 @@ public class DriverService {
     }
 
     public DriverResponse registerDriver(DriverRequest request) {
+
+        if (driverRepository.existsByPhoneNo(request.getPhoneNo())) {
+            throw new RuntimeException("Phone number is already registered");
+        }
+
+        if (driverRepository.existsByEmail(request.getEmail())) {
+            throw new RuntimeException("Email is already registered");
+        }
+
+        if (driverRepository.existsByLicenseNumber(request.getLicenseNumber())) {
+            throw new RuntimeException("License number is already registered");
+        }
+
         Driver driver = new Driver();
 
         driver.setPhoneNo(request.getPhoneNo());
@@ -75,7 +88,20 @@ public class DriverService {
     }
 
     public DriverResponse updateDriver(UUID id, DriverRequest request) {
+
         Driver driver = findDriver(id);
+
+        if (driverRepository.existsByPhoneNoAndIdNot(request.getPhoneNo(), id)) {
+            throw new RuntimeException("Phone number is already registered");
+        }
+
+        if (driverRepository.existsByEmailAndIdNot(request.getEmail(), id)) {
+            throw new RuntimeException("Email is already registered");
+        }
+
+        if (driverRepository.existsByLicenseNumber(request.getLicenseNumber())) {
+            throw new RuntimeException("License number is already registered");
+        }
 
         driver.setPhoneNo(request.getPhoneNo());
         driver.setUserName(request.getUserName());

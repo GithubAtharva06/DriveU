@@ -23,12 +23,15 @@ public class Driver {
             regexp = "^(?:\\+91|91)?[6-9]\\d{9}$",
             message = "Invalid Indian phone number. Must be a valid 10-digit number optionally starting with +91 or 91."
     )
+    @Column(nullable = false, unique = true)
     private String phoneNo;
 
     @NotBlank
     private String userName;
+
     @Email
     @NotBlank
+    @Column(nullable = false, unique = true)
     private String email;
 
 
@@ -41,9 +44,12 @@ public class Driver {
     private String password;
 
     @NotBlank
+    @Column(nullable = false, unique = true)
     private String licenseNumber;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private StatusCheck status = StatusCheck.OFFLINE;
+
     private LocalDateTime createdAt;
 }

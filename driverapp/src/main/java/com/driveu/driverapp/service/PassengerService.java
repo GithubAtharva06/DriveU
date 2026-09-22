@@ -31,6 +31,15 @@ public class PassengerService {
     }
 
     public PassengerResponse registerPassenger(PassengerRequest request) {
+
+        if (passengerRepository.existsByPhoneNo(request.getPhoneNo())) {
+            throw new RuntimeException("Phone number is already registered");
+        }
+
+        if (passengerRepository.existsByEmail(request.getEmail())) {
+            throw new RuntimeException("Email is already registered");
+        }
+
         Passenger passenger = new Passenger();
 
         passenger.setPhoneNo(request.getPhoneNo());
@@ -58,9 +67,19 @@ public class PassengerService {
                 .map(this::mapToResponse)
                 .toList();
     }
+
     public PassengerResponse updatePassenger(UUID id, PassengerRequest request) {
+
         Passenger passenger = passengerRepository.findById(id)
                 .orElseThrow();
+
+        if (passengerRepository.existsByPhoneNoAndIdNot(request.getPhoneNo(), id)) {
+            throw new RuntimeException("Phone number is already registered");
+        }
+
+        if (passengerRepository.existsByEmailAndIdNot(request.getEmail(), id)) {
+            throw new RuntimeException("Email is already registered");
+        }
 
         passenger.setPhoneNo(request.getPhoneNo());
         passenger.setUserName(request.getUserName());
@@ -71,6 +90,7 @@ public class PassengerService {
 
         return mapToResponse(passenger);
     }
+
     public void deactivatePassenger(UUID id) {
         Passenger passenger = passengerRepository.findById(id)
                 .orElseThrow();

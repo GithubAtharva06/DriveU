@@ -76,6 +76,15 @@ public class AdminService {
     // ==================== ADMIN ====================
 
     public AdminResponse registerAdmin(AdminRequest request) {
+
+        if (adminRepository.existsByPhoneNo(request.getPhoneNo())) {
+            throw new RuntimeException("Phone number is already registered");
+        }
+
+        if (adminRepository.existsByEmail(request.getEmail())) {
+            throw new RuntimeException("Email is already registered");
+        }
+
         Admin admin = new Admin();
 
         admin.setPhoneNo(request.getPhoneNo());
@@ -106,8 +115,17 @@ public class AdminService {
     }
 
     public AdminResponse updateAdmin(UUID id, AdminRequest request) {
+
         Admin admin = adminRepository.findById(id)
                 .orElseThrow();
+
+        if (adminRepository.existsByPhoneNoAndIdNot(request.getPhoneNo(), id)) {
+            throw new RuntimeException("Phone number is already registered");
+        }
+
+        if (adminRepository.existsByEmailAndIdNot(request.getEmail(), id)) {
+            throw new RuntimeException("Email is already registered");
+        }
 
         admin.setPhoneNo(request.getPhoneNo());
         admin.setUserName(request.getUserName());
