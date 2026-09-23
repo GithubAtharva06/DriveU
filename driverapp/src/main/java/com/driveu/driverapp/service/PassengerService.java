@@ -8,6 +8,8 @@ import com.driveu.driverapp.exception.ResourceNotFoundException;
 import com.driveu.driverapp.repository.PassengerRepository;
 import org.springframework.stereotype.Service;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -16,9 +18,14 @@ import java.util.UUID;
 public class PassengerService {
 
     private final PassengerRepository passengerRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public PassengerService(PassengerRepository passengerRepository) {
+    public PassengerService(
+            PassengerRepository passengerRepository,
+            PasswordEncoder passwordEncoder
+    ) {
         this.passengerRepository = passengerRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     private PassengerResponse mapToResponse(Passenger passenger) {
@@ -52,7 +59,9 @@ public class PassengerService {
         passenger.setPhoneNo(request.getPhoneNo());
         passenger.setUserName(request.getUserName());
         passenger.setEmail(request.getEmail());
-        passenger.setPassword(request.getPassword());
+        passenger.setPassword(
+                passwordEncoder.encode(request.getPassword())
+        );
         passenger.setId(UUID.randomUUID());
         passenger.setCreatedAt(LocalDateTime.now());
 
@@ -108,7 +117,9 @@ public class PassengerService {
         passenger.setPhoneNo(request.getPhoneNo());
         passenger.setUserName(request.getUserName());
         passenger.setEmail(request.getEmail());
-        passenger.setPassword(request.getPassword());
+        passenger.setPassword(
+                passwordEncoder.encode(request.getPassword())
+        );
 
         passengerRepository.save(passenger);
 

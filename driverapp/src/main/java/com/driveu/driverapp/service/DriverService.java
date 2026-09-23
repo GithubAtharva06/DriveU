@@ -8,6 +8,7 @@ import com.driveu.driverapp.exception.DuplicateResourceException;
 import com.driveu.driverapp.exception.ResourceNotFoundException;
 import com.driveu.driverapp.repository.DriverRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,9 +18,14 @@ import java.util.UUID;
 public class DriverService {
 
     private final DriverRepository driverRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public DriverService(DriverRepository driverRepository) {
+    public DriverService(
+            DriverRepository driverRepository,
+            PasswordEncoder passwordEncoder
+    ) {
         this.driverRepository = driverRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     private Driver findDriver(UUID id) {
@@ -71,7 +77,9 @@ public class DriverService {
         driver.setPhoneNo(request.getPhoneNo());
         driver.setUserName(request.getUserName());
         driver.setEmail(request.getEmail());
-        driver.setPassword(request.getPassword());
+        driver.setPassword(
+                passwordEncoder.encode(request.getPassword())
+        );
         driver.setLicenseNumber(request.getLicenseNumber());
 
         driver.setId(UUID.randomUUID());
@@ -129,7 +137,9 @@ public class DriverService {
         driver.setPhoneNo(request.getPhoneNo());
         driver.setUserName(request.getUserName());
         driver.setEmail(request.getEmail());
-        driver.setPassword(request.getPassword());
+        driver.setPassword(
+                passwordEncoder.encode(request.getPassword())
+        );
         driver.setLicenseNumber(request.getLicenseNumber());
 
         driverRepository.save(driver);

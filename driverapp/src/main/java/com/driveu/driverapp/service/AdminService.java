@@ -16,6 +16,8 @@ import com.driveu.driverapp.repository.PassengerRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -26,15 +28,18 @@ public class AdminService {
     private final AdminRepository adminRepository;
     private final PassengerRepository passengerRepository;
     private final DriverRepository driverRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public AdminService(
             AdminRepository adminRepository,
             PassengerRepository passengerRepository,
-            DriverRepository driverRepository) {
+            DriverRepository driverRepository,
+            PasswordEncoder passwordEncoder) {
 
         this.adminRepository = adminRepository;
         this.passengerRepository = passengerRepository;
         this.driverRepository = driverRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     private AdminResponse mapToResponse(Admin admin) {
@@ -96,7 +101,9 @@ public class AdminService {
         admin.setPhoneNo(request.getPhoneNo());
         admin.setUserName(request.getUserName());
         admin.setEmail(request.getEmail());
-        admin.setPassword(request.getPassword());
+        admin.setPassword(
+                passwordEncoder.encode(request.getPassword())
+        );
 
         admin.setId(UUID.randomUUID());
         admin.setCreatedAt(LocalDateTime.now());
@@ -150,7 +157,9 @@ public class AdminService {
         admin.setPhoneNo(request.getPhoneNo());
         admin.setUserName(request.getUserName());
         admin.setEmail(request.getEmail());
-        admin.setPassword(request.getPassword());
+        admin.setPassword(
+                passwordEncoder.encode(request.getPassword())
+        );
 
         adminRepository.save(admin);
 
