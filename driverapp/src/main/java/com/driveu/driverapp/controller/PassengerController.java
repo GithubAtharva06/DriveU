@@ -3,6 +3,7 @@ package com.driveu.driverapp.controller;
 import com.driveu.driverapp.dto.Request.PassengerRequest;
 import com.driveu.driverapp.dto.Response.PassengerResponse;
 import com.driveu.driverapp.service.PassengerService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,9 +22,11 @@ public class PassengerController {
     }
 
     @PostMapping
-    public ResponseEntity<PassengerResponse> registerPassenger(@RequestBody PassengerRequest request) {
+    public ResponseEntity<PassengerResponse> registerPassenger(
+            @Valid @RequestBody PassengerRequest request) {
 
-        PassengerResponse response = passengerService.registerPassenger(request);
+        PassengerResponse response =
+                passengerService.registerPassenger(request);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -31,9 +34,11 @@ public class PassengerController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PassengerResponse> getPassengerById(@PathVariable UUID id) {
+    public ResponseEntity<PassengerResponse> getPassengerById(
+            @PathVariable UUID id) {
 
-        PassengerResponse response = passengerService.getPassengerById(id);
+        PassengerResponse response =
+                passengerService.getPassengerById(id);
 
         return ResponseEntity.ok(response);
     }
@@ -41,21 +46,26 @@ public class PassengerController {
     @GetMapping
     public ResponseEntity<List<PassengerResponse>> getAllPassengers() {
 
-        List<PassengerResponse> response = passengerService.getAllPassengers();
+        List<PassengerResponse> response =
+                passengerService.getAllPassengers();
 
         return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<PassengerResponse> updatePassenger(@PathVariable UUID id, @RequestBody PassengerRequest request) {
+    public ResponseEntity<PassengerResponse> updatePassenger(
+            @PathVariable UUID id,
+            @Valid @RequestBody PassengerRequest request) {
 
-        PassengerResponse response = passengerService.updatePassenger(id, request);
+        PassengerResponse response =
+                passengerService.updatePassenger(id, request);
 
         return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/{id}/deactivate")
-    public ResponseEntity<Void> deactivatePassenger(@PathVariable UUID id) {
+    public ResponseEntity<Void> deactivatePassenger(
+            @PathVariable UUID id) {
 
         passengerService.deactivatePassenger(id);
 
@@ -72,7 +82,8 @@ public class PassengerController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePassenger(@PathVariable UUID id) {
+    public ResponseEntity<Void> deletePassenger(
+            @PathVariable UUID id) {
 
         passengerService.deletePassenger(id);
 

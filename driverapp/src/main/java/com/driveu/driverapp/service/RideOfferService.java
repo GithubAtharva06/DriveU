@@ -1,9 +1,10 @@
-
 package com.driveu.driverapp.service;
 
 import com.driveu.driverapp.dto.Response.NearbyDriverResponse;
 import com.driveu.driverapp.dto.Response.RideOfferResponse;
 import com.driveu.driverapp.entities.*;
+import com.driveu.driverapp.exception.BusinessException;
+import com.driveu.driverapp.exception.ResourceNotFoundException;
 import com.driveu.driverapp.repository.DriverRepository;
 import com.driveu.driverapp.repository.RideOfferRepository;
 import com.driveu.driverapp.repository.RideRepository;
@@ -41,11 +42,13 @@ public class RideOfferService {
 
         Ride ride = rideRepository.findById(rideId)
                 .orElseThrow(() ->
-                        new RuntimeException("Ride not found")
+                        new ResourceNotFoundException(
+                                "Ride not found with ID: " + rideId
+                        )
                 );
 
         if (ride.getRideStatus() != RideStatus.REQUESTED) {
-            throw new RuntimeException(
+            throw new BusinessException(
                     "Offers can only be generated for requested rides"
             );
         }
@@ -72,8 +75,9 @@ public class RideOfferService {
                             driverRepository.findById(
                                     driver.getDriverId()
                             ).orElseThrow(() ->
-                                    new RuntimeException(
-                                            "Driver not found"
+                                    new ResourceNotFoundException(
+                                            "Driver not found with ID: "
+                                                    + driver.getDriverId()
                                     )
                             );
 
@@ -110,6 +114,12 @@ public class RideOfferService {
 
     public List<RideOfferResponse> getOffersByRide(UUID rideId) {
 
+        if (!rideRepository.existsById(rideId)) {
+            throw new ResourceNotFoundException(
+                    "Ride not found with ID: " + rideId
+            );
+        }
+
         return rideOfferRepository
                 .findByRide_RideId(rideId)
                 .stream()
@@ -120,6 +130,12 @@ public class RideOfferService {
     // GET OFFERS FOR A DRIVER
 
     public List<RideOfferResponse> getOffersByDriver(UUID driverId) {
+
+        if (!driverRepository.existsById(driverId)) {
+            throw new ResourceNotFoundException(
+                    "Driver not found with ID: " + driverId
+            );
+        }
 
         return rideOfferRepository
                 .findByDriver_Id(driverId)
@@ -141,7 +157,7 @@ public class RideOfferService {
         validateOfferOwnership(offer, driverId);
 
         if (offer.getOfferStatus() != OfferStatus.PENDING) {
-            throw new RuntimeException(
+            throw new BusinessException(
                     "Only pending offers can be declined"
             );
         }
@@ -149,7 +165,7 @@ public class RideOfferService {
         expireOfferIfNecessary(offer);
 
         if (offer.getOfferStatus() == OfferStatus.EXPIRED) {
-            throw new RuntimeException(
+            throw new BusinessException(
                     "This offer has expired"
             );
         }
@@ -175,7 +191,7 @@ public class RideOfferService {
         validateOfferOwnership(offer, driverId);
 
         if (offer.getOfferStatus() != OfferStatus.PENDING) {
-            throw new RuntimeException(
+            throw new BusinessException(
                     "Only pending offers can be accepted"
             );
         }
@@ -185,7 +201,7 @@ public class RideOfferService {
         expireOfferIfNecessary(offer);
 
         if (offer.getOfferStatus() == OfferStatus.EXPIRED) {
-            throw new RuntimeException(
+            throw new BusinessException(
                     "This offer has expired"
             );
         }
@@ -195,7 +211,7 @@ public class RideOfferService {
         // Ensure only one driver accepts the ride
 
         if (ride.getRideStatus() != RideStatus.REQUESTED) {
-            throw new RuntimeException(
+            throw new BusinessException(
                     "This ride is no longer available"
             );
         }
@@ -205,7 +221,7 @@ public class RideOfferService {
         // Driver must be online
 
         if (driver.getStatus() != StatusCheck.ONLINE) {
-            throw new RuntimeException(
+            throw new BusinessException(
                     "Driver must be online to accept an offer"
             );
         }
@@ -225,7 +241,7 @@ public class RideOfferService {
 
             rideOfferRepository.save(offer);
 
-            throw new RuntimeException(
+            throw new BusinessException(
                     "You are outside the 2 km pickup range"
             );
         }
@@ -246,7 +262,7 @@ public class RideOfferService {
                 );
 
         if (driverHasActiveRide) {
-            throw new RuntimeException(
+            throw new BusinessException(
                     "Driver already has an active ride"
             );
         }
@@ -295,8 +311,8 @@ public class RideOfferService {
 
         return rideOfferRepository.findById(offerId)
                 .orElseThrow(() ->
-                        new RuntimeException(
-                                "Ride offer not found"
+                        new ResourceNotFoundException(
+                                "Ride offer not found with ID: " + offerId
                         )
                 );
     }
@@ -308,7 +324,7 @@ public class RideOfferService {
 
         if (!offer.getDriver().getId().equals(driverId)) {
 
-            throw new RuntimeException(
+            throw new BusinessException(
                     "This offer does not belong to the driver"
             );
         }
@@ -344,5 +360,4 @@ public class RideOfferService {
 
         return response;
     }
-
 }

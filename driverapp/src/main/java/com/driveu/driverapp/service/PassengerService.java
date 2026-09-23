@@ -3,6 +3,8 @@ package com.driveu.driverapp.service;
 import com.driveu.driverapp.dto.Request.PassengerRequest;
 import com.driveu.driverapp.dto.Response.PassengerResponse;
 import com.driveu.driverapp.entities.Passenger;
+import com.driveu.driverapp.exception.DuplicateResourceException;
+import com.driveu.driverapp.exception.ResourceNotFoundException;
 import com.driveu.driverapp.repository.PassengerRepository;
 import org.springframework.stereotype.Service;
 
@@ -12,6 +14,7 @@ import java.util.UUID;
 
 @Service
 public class PassengerService {
+
     private final PassengerRepository passengerRepository;
 
     public PassengerService(PassengerRepository passengerRepository) {
@@ -33,11 +36,15 @@ public class PassengerService {
     public PassengerResponse registerPassenger(PassengerRequest request) {
 
         if (passengerRepository.existsByPhoneNo(request.getPhoneNo())) {
-            throw new RuntimeException("Phone number is already registered");
+            throw new DuplicateResourceException(
+                    "Phone number is already registered"
+            );
         }
 
         if (passengerRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email is already registered");
+            throw new DuplicateResourceException(
+                    "Email is already registered"
+            );
         }
 
         Passenger passenger = new Passenger();
@@ -54,8 +61,12 @@ public class PassengerService {
         return mapToResponse(passenger);
     }
 
-    public PassengerResponse getPassengerById(UUID id){
-        Passenger passenger = passengerRepository.findById(id).orElseThrow();
+    public PassengerResponse getPassengerById(UUID id) {
+        Passenger passenger = passengerRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Passenger not found with ID: " + id
+                        ));
 
         return mapToResponse(passenger);
     }
@@ -68,17 +79,30 @@ public class PassengerService {
                 .toList();
     }
 
-    public PassengerResponse updatePassenger(UUID id, PassengerRequest request) {
+    public PassengerResponse updatePassenger(
+            UUID id,
+            PassengerRequest request) {
 
         Passenger passenger = passengerRepository.findById(id)
-                .orElseThrow();
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Passenger not found with ID: " + id
+                        ));
 
-        if (passengerRepository.existsByPhoneNoAndIdNot(request.getPhoneNo(), id)) {
-            throw new RuntimeException("Phone number is already registered");
+        if (passengerRepository.existsByPhoneNoAndIdNot(
+                request.getPhoneNo(), id)) {
+
+            throw new DuplicateResourceException(
+                    "Phone number is already registered"
+            );
         }
 
-        if (passengerRepository.existsByEmailAndIdNot(request.getEmail(), id)) {
-            throw new RuntimeException("Email is already registered");
+        if (passengerRepository.existsByEmailAndIdNot(
+                request.getEmail(), id)) {
+
+            throw new DuplicateResourceException(
+                    "Email is already registered"
+            );
         }
 
         passenger.setPhoneNo(request.getPhoneNo());
@@ -93,7 +117,10 @@ public class PassengerService {
 
     public void deactivatePassenger(UUID id) {
         Passenger passenger = passengerRepository.findById(id)
-                .orElseThrow();
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Passenger not found with ID: " + id
+                        ));
 
         passenger.setActive(false);
 
@@ -102,7 +129,10 @@ public class PassengerService {
 
     public void reactivatePassenger(UUID id) {
         Passenger passenger = passengerRepository.findById(id)
-                .orElseThrow();
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Passenger not found with ID: " + id
+                        ));
 
         passenger.setActive(true);
 
@@ -111,10 +141,11 @@ public class PassengerService {
 
     public void deletePassenger(UUID id) {
         Passenger passenger = passengerRepository.findById(id)
-                .orElseThrow();
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Passenger not found with ID: " + id
+                        ));
 
         passengerRepository.delete(passenger);
     }
-
-
 }

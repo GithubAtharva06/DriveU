@@ -8,6 +8,8 @@ import com.driveu.driverapp.entities.Admin;
 import com.driveu.driverapp.entities.Driver;
 import com.driveu.driverapp.entities.Passenger;
 import com.driveu.driverapp.entities.StatusCheck;
+import com.driveu.driverapp.exception.DuplicateResourceException;
+import com.driveu.driverapp.exception.ResourceNotFoundException;
 import com.driveu.driverapp.repository.AdminRepository;
 import com.driveu.driverapp.repository.DriverRepository;
 import com.driveu.driverapp.repository.PassengerRepository;
@@ -78,11 +80,15 @@ public class AdminService {
     public AdminResponse registerAdmin(AdminRequest request) {
 
         if (adminRepository.existsByPhoneNo(request.getPhoneNo())) {
-            throw new RuntimeException("Phone number is already registered");
+            throw new DuplicateResourceException(
+                    "Phone number is already registered"
+            );
         }
 
         if (adminRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email is already registered");
+            throw new DuplicateResourceException(
+                    "Email is already registered"
+            );
         }
 
         Admin admin = new Admin();
@@ -102,7 +108,10 @@ public class AdminService {
 
     public AdminResponse getAdminById(UUID id) {
         Admin admin = adminRepository.findById(id)
-                .orElseThrow();
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Admin not found with ID: " + id
+                        ));
 
         return mapToResponse(admin);
     }
@@ -117,14 +126,25 @@ public class AdminService {
     public AdminResponse updateAdmin(UUID id, AdminRequest request) {
 
         Admin admin = adminRepository.findById(id)
-                .orElseThrow();
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Admin not found with ID: " + id
+                        ));
 
-        if (adminRepository.existsByPhoneNoAndIdNot(request.getPhoneNo(), id)) {
-            throw new RuntimeException("Phone number is already registered");
+        if (adminRepository.existsByPhoneNoAndIdNot(
+                request.getPhoneNo(), id)) {
+
+            throw new DuplicateResourceException(
+                    "Phone number is already registered"
+            );
         }
 
-        if (adminRepository.existsByEmailAndIdNot(request.getEmail(), id)) {
-            throw new RuntimeException("Email is already registered");
+        if (adminRepository.existsByEmailAndIdNot(
+                request.getEmail(), id)) {
+
+            throw new DuplicateResourceException(
+                    "Email is already registered"
+            );
         }
 
         admin.setPhoneNo(request.getPhoneNo());
@@ -139,7 +159,10 @@ public class AdminService {
 
     public void deleteAdmin(UUID id) {
         Admin admin = adminRepository.findById(id)
-                .orElseThrow();
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Admin not found with ID: " + id
+                        ));
 
         adminRepository.delete(admin);
     }
@@ -155,14 +178,20 @@ public class AdminService {
 
     public PassengerResponse getPassengerById(UUID id) {
         Passenger passenger = passengerRepository.findById(id)
-                .orElseThrow();
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Passenger not found with ID: " + id
+                        ));
 
         return mapPassengerToResponse(passenger);
     }
 
     public void deactivatePassenger(UUID id) {
         Passenger passenger = passengerRepository.findById(id)
-                .orElseThrow();
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Passenger not found with ID: " + id
+                        ));
 
         passenger.setActive(false);
 
@@ -171,7 +200,10 @@ public class AdminService {
 
     public void deletePassenger(UUID id) {
         Passenger passenger = passengerRepository.findById(id)
-                .orElseThrow();
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Passenger not found with ID: " + id
+                        ));
 
         passengerRepository.delete(passenger);
     }
@@ -187,14 +219,20 @@ public class AdminService {
 
     public DriverResponse getDriverById(UUID id) {
         Driver driver = driverRepository.findById(id)
-                .orElseThrow();
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Driver not found with ID: " + id
+                        ));
 
         return mapDriverToResponse(driver);
     }
 
     public void deactivateDriver(UUID id) {
         Driver driver = driverRepository.findById(id)
-                .orElseThrow();
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Driver not found with ID: " + id
+                        ));
 
         driver.setStatus(StatusCheck.OFFLINE);
 
@@ -203,27 +241,37 @@ public class AdminService {
 
     public void deleteDriver(UUID id) {
         Driver driver = driverRepository.findById(id)
-                .orElseThrow();
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Driver not found with ID: " + id
+                        ));
 
         driverRepository.delete(driver);
     }
 
     @Transactional
     public void deleteMultiplePassengers(List<UUID> ids) {
+
         List<Passenger> passengers = passengerRepository.findAllById(ids);
 
         if (passengers.size() != ids.size()) {
-            throw new RuntimeException("One or more passengers not found");
+            throw new ResourceNotFoundException(
+                    "One or more passengers not found"
+            );
         }
 
         passengerRepository.deleteAll(passengers);
     }
+
     @Transactional
     public void deleteMultipleDrivers(List<UUID> ids) {
+
         List<Driver> drivers = driverRepository.findAllById(ids);
 
         if (drivers.size() != ids.size()) {
-            throw new RuntimeException("One or more drivers not found");
+            throw new ResourceNotFoundException(
+                    "One or more drivers not found"
+            );
         }
 
         driverRepository.deleteAll(drivers);

@@ -1,4 +1,3 @@
-
 package com.driveu.driverapp.service;
 
 import com.driveu.driverapp.dto.Request.RideRequest;
@@ -7,6 +6,8 @@ import com.driveu.driverapp.entities.Driver;
 import com.driveu.driverapp.entities.Passenger;
 import com.driveu.driverapp.entities.Ride;
 import com.driveu.driverapp.entities.RideStatus;
+import com.driveu.driverapp.exception.BusinessException;
+import com.driveu.driverapp.exception.ResourceNotFoundException;
 import com.driveu.driverapp.repository.DriverRepository;
 import com.driveu.driverapp.repository.PassengerRepository;
 import com.driveu.driverapp.repository.RideRepository;
@@ -87,7 +88,10 @@ public class RideService {
     public RideResponse getRideById(UUID rideId) {
 
         Ride ride = rideRepository.findById(rideId)
-                .orElseThrow(() -> new RuntimeException("Ride not found"));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Ride not found with ID: " + rideId
+                        ));
 
         return mapToResponse(ride);
     }
@@ -95,7 +99,10 @@ public class RideService {
     public List<RideResponse> getRidesByPassenger(UUID passengerId) {
 
         passengerRepository.findById(passengerId)
-                .orElseThrow(() -> new RuntimeException("Passenger not found"));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Passenger not found with ID: " + passengerId
+                        ));
 
         return rideRepository.findByPassengerId(passengerId)
                 .stream()
@@ -106,7 +113,10 @@ public class RideService {
     public List<RideResponse> getRidesByDriver(UUID driverId) {
 
         driverRepository.findById(driverId)
-                .orElseThrow(() -> new RuntimeException("Driver not found"));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Driver not found with ID: " + driverId
+                        ));
 
         return rideRepository.findByDriverId(driverId)
                 .stream()
@@ -125,11 +135,18 @@ public class RideService {
     @Transactional
     public RideResponse createRide(RideRequest request) {
 
-        Passenger passenger = passengerRepository.findById(request.getPassengerId())
-                .orElseThrow(() -> new RuntimeException("Passenger not found"));
+        Passenger passenger =
+                passengerRepository.findById(request.getPassengerId())
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Passenger not found with ID: "
+                                                + request.getPassengerId()
+                                ));
 
         if (!passenger.isActive()) {
-            throw new RuntimeException("Passenger account is inactive");
+            throw new BusinessException(
+                    "Passenger account is inactive"
+            );
         }
 
         boolean hasActiveRide =
@@ -139,7 +156,7 @@ public class RideService {
                 );
 
         if (hasActiveRide) {
-            throw new RuntimeException(
+            throw new BusinessException(
                     "Passenger already has an active ride"
             );
         }
@@ -168,19 +185,27 @@ public class RideService {
     public RideResponse acceptRide(UUID rideId, UUID driverId) {
 
         Ride ride = rideRepository.findById(rideId)
-                .orElseThrow(() -> new RuntimeException("Ride not found"));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Ride not found with ID: " + rideId
+                        ));
 
         Driver driver = driverRepository.findById(driverId)
-                .orElseThrow(() -> new RuntimeException("Driver not found"));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Driver not found with ID: " + driverId
+                        ));
 
         if (ride.getRideStatus() != RideStatus.REQUESTED) {
-            throw new RuntimeException("Ride is no longer available");
+            throw new BusinessException(
+                    "Ride is no longer available"
+            );
         }
 
         if (driver.getStatus() == null ||
                 !driver.getStatus().name().equals("ONLINE")) {
 
-            throw new RuntimeException(
+            throw new BusinessException(
                     "Driver must be online to accept a ride"
             );
         }
@@ -192,7 +217,7 @@ public class RideService {
                 );
 
         if (driverHasActiveRide) {
-            throw new RuntimeException(
+            throw new BusinessException(
                     "Driver already has an active ride"
             );
         }
@@ -213,18 +238,25 @@ public class RideService {
     ) {
 
         if (newStatus == null) {
-            throw new RuntimeException("Ride status cannot be null");
+            throw new BusinessException(
+                    "Ride status cannot be null"
+            );
         }
 
         Ride ride = rideRepository.findById(rideId)
-                .orElseThrow(() -> new RuntimeException("Ride not found"));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Ride not found with ID: " + rideId
+                        ));
 
         if (ride.getDriver() == null) {
-            throw new RuntimeException("No driver assigned to this ride");
+            throw new BusinessException(
+                    "No driver assigned to this ride"
+            );
         }
 
         if (!ride.getDriver().getId().equals(driverId)) {
-            throw new RuntimeException(
+            throw new BusinessException(
                     "You are not assigned to this ride"
             );
         }
@@ -249,7 +281,7 @@ public class RideService {
         };
 
         if (!validTransition) {
-            throw new RuntimeException(
+            throw new BusinessException(
                     "Invalid ride status transition from "
                             + currentStatus + " to " + newStatus
             );
@@ -258,7 +290,7 @@ public class RideService {
         if (newStatus == RideStatus.IN_PROGRESS) {
 
             if (ride.getPickupAt() != null) {
-                throw new RuntimeException(
+                throw new BusinessException(
                         "Pickup time has already been recorded"
                 );
             }
@@ -269,7 +301,7 @@ public class RideService {
         if (newStatus == RideStatus.COMPLETED) {
 
             if (ride.getPickupAt() == null) {
-                throw new RuntimeException(
+                throw new BusinessException(
                         "Pickup time must be recorded before completion"
                 );
             }
@@ -288,10 +320,13 @@ public class RideService {
     public RideResponse cancelRide(UUID rideId, UUID passengerId) {
 
         Ride ride = rideRepository.findById(rideId)
-                .orElseThrow(() -> new RuntimeException("Ride not found"));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Ride not found with ID: " + rideId
+                        ));
 
         if (!ride.getPassenger().getId().equals(passengerId)) {
-            throw new RuntimeException(
+            throw new BusinessException(
                     "You are not the passenger of this ride"
             );
         }
@@ -309,7 +344,7 @@ public class RideService {
         };
 
         if (!cancellable) {
-            throw new RuntimeException(
+            throw new BusinessException(
                     "Ride cannot be cancelled in status "
                             + currentStatus
             );

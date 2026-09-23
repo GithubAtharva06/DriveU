@@ -1,10 +1,11 @@
-
 package com.driveu.driverapp.service;
 
 import com.driveu.driverapp.dto.Request.DriverRequest;
 import com.driveu.driverapp.dto.Response.DriverResponse;
 import com.driveu.driverapp.entities.Driver;
 import com.driveu.driverapp.entities.StatusCheck;
+import com.driveu.driverapp.exception.DuplicateResourceException;
+import com.driveu.driverapp.exception.ResourceNotFoundException;
 import com.driveu.driverapp.repository.DriverRepository;
 import org.springframework.stereotype.Service;
 
@@ -24,7 +25,9 @@ public class DriverService {
     private Driver findDriver(UUID id) {
         return driverRepository.findById(id)
                 .orElseThrow(() ->
-                        new RuntimeException("Driver not found with ID: " + id));
+                        new ResourceNotFoundException(
+                                "Driver not found with ID: " + id
+                        ));
     }
 
     private DriverResponse mapToResponse(Driver driver) {
@@ -44,15 +47,23 @@ public class DriverService {
     public DriverResponse registerDriver(DriverRequest request) {
 
         if (driverRepository.existsByPhoneNo(request.getPhoneNo())) {
-            throw new RuntimeException("Phone number is already registered");
+            throw new DuplicateResourceException(
+                    "Phone number is already registered"
+            );
         }
 
         if (driverRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email is already registered");
+            throw new DuplicateResourceException(
+                    "Email is already registered"
+            );
         }
 
-        if (driverRepository.existsByLicenseNumber(request.getLicenseNumber())) {
-            throw new RuntimeException("License number is already registered");
+        if (driverRepository.existsByLicenseNumber(
+                request.getLicenseNumber())) {
+
+            throw new DuplicateResourceException(
+                    "License number is already registered"
+            );
         }
 
         Driver driver = new Driver();
@@ -91,16 +102,28 @@ public class DriverService {
 
         Driver driver = findDriver(id);
 
-        if (driverRepository.existsByPhoneNoAndIdNot(request.getPhoneNo(), id)) {
-            throw new RuntimeException("Phone number is already registered");
+        if (driverRepository.existsByPhoneNoAndIdNot(
+                request.getPhoneNo(), id)) {
+
+            throw new DuplicateResourceException(
+                    "Phone number is already registered"
+            );
         }
 
-        if (driverRepository.existsByEmailAndIdNot(request.getEmail(), id)) {
-            throw new RuntimeException("Email is already registered");
+        if (driverRepository.existsByEmailAndIdNot(
+                request.getEmail(), id)) {
+
+            throw new DuplicateResourceException(
+                    "Email is already registered"
+            );
         }
 
-        if (driverRepository.existsByLicenseNumber(request.getLicenseNumber())) {
-            throw new RuntimeException("License number is already registered");
+        if (driverRepository.existsByLicenseNumberAndIdNot(
+                request.getLicenseNumber(), id)) {
+
+            throw new DuplicateResourceException(
+                    "License number is already registered"
+            );
         }
 
         driver.setPhoneNo(request.getPhoneNo());

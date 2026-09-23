@@ -5,6 +5,7 @@ import com.driveu.driverapp.dto.Response.AdminResponse;
 import com.driveu.driverapp.dto.Response.DriverResponse;
 import com.driveu.driverapp.dto.Response.PassengerResponse;
 import com.driveu.driverapp.service.AdminService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,7 +25,7 @@ public class AdminController {
 
     @PostMapping
     public ResponseEntity<AdminResponse> registerAdmin(
-            @RequestBody AdminRequest request) {
+            @Valid @RequestBody AdminRequest request) {
 
         AdminResponse response = adminService.registerAdmin(request);
 
@@ -53,7 +54,7 @@ public class AdminController {
     @PutMapping("/{id}")
     public ResponseEntity<AdminResponse> updateAdmin(
             @PathVariable UUID id,
-            @RequestBody AdminRequest request) {
+            @Valid @RequestBody AdminRequest request) {
 
         AdminResponse response = adminService.updateAdmin(id, request);
 
@@ -138,6 +139,7 @@ public class AdminController {
 
         return ResponseEntity.noContent().build();
     }
+
     @GetMapping("/passengers/{id}")
     public ResponseEntity<PassengerResponse> getPassengerById(
             @PathVariable UUID id) {

@@ -6,14 +6,14 @@ import com.driveu.driverapp.dto.Response.NearbyDriverResponse;
 import com.driveu.driverapp.entities.Driver;
 import com.driveu.driverapp.entities.DriverLocation;
 import com.driveu.driverapp.entities.StatusCheck;
-import com.driveu.driverapp.repository.DriverLocationRepository;
-import com.driveu.driverapp.repository.DriverRepository;
-import org.springframework.stereotype.Service;
-
 import com.driveu.driverapp.entities.OfferStatus;
 import com.driveu.driverapp.entities.RideOffer;
+import com.driveu.driverapp.exception.ResourceNotFoundException;
+import com.driveu.driverapp.repository.DriverLocationRepository;
+import com.driveu.driverapp.repository.DriverRepository;
 import com.driveu.driverapp.repository.RideOfferRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -22,10 +22,10 @@ import java.util.UUID;
 
 @Service
 public class DriverLocationService {
+
     private static final double MAX_OFFER_DISTANCE_KM = 2.0;
 
     private final RideOfferRepository rideOfferRepository;
-
     private final DriverLocationRepository driverLocationRepository;
     private final DriverRepository driverRepository;
 
@@ -77,6 +77,7 @@ public class DriverLocationService {
             double pickupLatitude,
             double pickupLongitude
     ) {
+
         double distance = calculateDistance(
                 driverLatitude,
                 driverLongitude,
@@ -86,6 +87,7 @@ public class DriverLocationService {
 
         return distance > MAX_OFFER_DISTANCE_KM;
     }
+
     @Transactional
     public void expireOffersOutsideRange(
             UUID driverId,
@@ -124,7 +126,6 @@ public class DriverLocationService {
             );
 
             if (outsideRange) {
-
                 offer.setOfferStatus(OfferStatus.EXPIRED);
             }
         }
@@ -156,7 +157,7 @@ public class DriverLocationService {
 
         Driver driver = driverRepository.findById(driverId)
                 .orElseThrow(() ->
-                        new RuntimeException(
+                        new ResourceNotFoundException(
                                 "Driver not found with ID: " + driverId
                         )
                 );
@@ -252,8 +253,9 @@ public class DriverLocationService {
         DriverLocation driverLocation =
                 driverLocationRepository.findByDriverId(driverId)
                         .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Driver location not found"
+                                new ResourceNotFoundException(
+                                        "Driver location not found for driver ID: "
+                                                + driverId
                                 )
                         );
 
@@ -266,6 +268,4 @@ public class DriverLocationService {
 
         return distance <= MAX_OFFER_DISTANCE_KM;
     }
-
-
 }
