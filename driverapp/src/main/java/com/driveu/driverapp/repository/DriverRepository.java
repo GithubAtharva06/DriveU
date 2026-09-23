@@ -4,11 +4,14 @@ import com.driveu.driverapp.entities.Driver;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface DriverRepository extends JpaRepository<Driver, UUID> {
 
     List<Driver> findAll();
+
+    Optional<Driver> findByEmail(String email);
 
     boolean existsByPhoneNo(String phoneNo);
 
